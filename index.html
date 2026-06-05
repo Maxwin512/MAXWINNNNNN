@@ -31,7 +31,7 @@
         <input type="text" id="login-user" value="admin" placeholder="Логин"><br>
         <input type="password" id="login-pass" value="Admin123!" placeholder="Пароль"><br>
         <div id="login-error" class="error"></div>
-        <button onclick="tryLogin()">Войти</button>
+        <button id="btn-login">Войти</button>
         <button style="background:#6c757d;" onclick="switchScreen('reg-screen')">Регистрация</button>
         <p style="font-size:12px; color:#666;">Дефолтный admin: admin / Admin123!</p>
     </div>
@@ -91,25 +91,23 @@
     </div>
 
     <script>
-        if(!localStorage.getItem('users')) {
-            localStorage.setItem('users', JSON.stringify([
-                {id: 1, username: 'admin', password: 'Admin123!', email: 'admin@finance.com', role: 'admin', currency: 'RUB'}
-            ]));
-            localStorage.setItem('accounts', JSON.stringify([
-                {id: 1, user_id: 1, name: 'Основной картсчет', balance: 55000}
-            ]));
-            localStorage.setItem('transactions', JSON.stringify([
-                {id: 1, user_id: 1, account: 'Основной картсчет', amount: -1200, date: '2026-06-05'}
-            ]));
+        // Жестко инициализируем базу в локальном хранилище
+        if (!localStorage.getItem('users')) {
+            localStorage.setItem('users', JSON.stringify([{id:1,username:'admin',password:'Admin123!',email:'admin@finance.com',role:'admin',currency:'RUB'}]));
+            localStorage.setItem('accounts', JSON.stringify([{id:1,user_id:1,name:'Основной картсчет',balance:55000}]));
+            localStorage.setItem('transactions', JSON.stringify([{id:1,user_id:1,account:'Основной картсчет',amount:-1200,date:'2026-06-05'}]));
         }
 
         let currentUser = null;
         let loginAttempts = 0;
         let lockUntil = 0;
 
-        if(localStorage.getItem('dark-theme') === 'true') {
+        if (localStorage.getItem('dark-theme') === 'true') {
             document.body.classList.add('dark');
-            document.getElementById('theme-toggle').checked = true;
+            setTimeout(() => {
+                let chk = document.getElementById('theme-toggle');
+                if(chk) chk.checked = true;
+            }, 100);
         }
 
         function switchScreen(screenId) {
@@ -132,8 +130,9 @@
             localStorage.setItem('dark-theme', isDark);
         }
 
-        function tryLogin() {
-            if(Date.now() < lockUntil) {
+        // Прямая привязка клика без inline-багов
+        document.getElementById('btn-login').onclick = function() {
+            if (Date.now() < lockUntil) {
                 let rem = Math.ceil((lockUntil - Date.now()) / 1000);
                 document.getElementById('login-error').innerText = `Система заблокирована. Подождите ${rem} сек.`;
                 return;
@@ -143,7 +142,7 @@
             let users = JSON.parse(localStorage.getItem('users'));
             let found = users.find(x => x.username === u && x.password === p);
 
-            if(found) {
+            if (found) {
                 currentUser = found;
                 loginAttempts = 0;
                 document.getElementById('welcome-msg').innerText = `Привет, ${currentUser.username} [${currentUser.role}]`;
@@ -151,14 +150,14 @@
                 updateData();
             } else {
                 loginAttempts++;
-                if(loginAttempts >= 3) {
+                if (loginAttempts >= 3) {
                     lockUntil = Date.now() + 30000;
                     document.getElementById('login-error').innerText = "Превышено 3 попытки! Блокировка на 30 сек.";
                 } else {
                     document.getElementById('login-error').innerText = `Неверный логин или пароль. Попыток: ${loginAttempts}/3`;
                 }
             }
-        }
+        };
 
         function tryRegister() {
             let u = document.getElementById('reg-user').value.trim();
@@ -167,13 +166,13 @@
             let email = document.getElementById('reg-email').value.trim();
             let curr = document.getElementById('reg-curr').value.trim();
 
-            if(!u || !p || !email || !curr) { document.getElementById('reg-error').innerText = "Заполните все поля!"; return; }
-            if(p !== conf) { document.getElementById('reg-error').innerText = "Пароли не совпадают!"; return; }
-            if(p.length < 8 || !/[A-Z]/.test(p) || !/[0-9]/.test(p)) { document.getElementById('reg-error').innerText = "Пароль слишком простой!"; return; }
-            if(!/@/.test(email)) { document.getElementById('reg-error').innerText = "Неверный формат Email!"; return; }
+            if (!u || !p || !email || !curr) { document.getElementById('reg-error').innerText = "Заполните все поля!"; return; }
+            if (p !== conf) { document.getElementById('reg-error').innerText = "Пароли не совпадают!"; return; }
+            if (p.length < 8 || !/[A-Z]/.test(p) || !/[0-9]/.test(p)) { document.getElementById('reg-error').innerText = "Пароль слишком простой!"; return; }
+            if (!/@/.test(email)) { document.getElementById('reg-error').innerText = "Неверный Email!"; return; }
 
             let users = JSON.parse(localStorage.getItem('users'));
-            if(users.find(x => x.username === u)) { document.getElementById('reg-error').innerText = "Логин уже занят!"; return; }
+            if (users.find(x => x.username === u)) { document.getElementById('reg-error').innerText = "Логин уже занят!"; return; }
 
             users.push({id: users.length+1, username: u, password: p, email: email, role: 'user', currency: curr});
             localStorage.setItem('users', JSON.stringify(users));
@@ -183,5 +182,3 @@
 
         function updateData() {
             let accs = JSON.parse(localStorage.getItem('accounts')) || [];
-            let txs = JSON.parse(localStorage.getItem('transactions')) || [];
-
