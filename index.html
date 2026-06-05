@@ -28,12 +28,12 @@
     <!-- ЭКРАН АВТОРИЗАЦИИ -->
     <div id="auth-screen" class="card">
         <h2>Вход в систему</h2>
-        <input type="text" id="login-user" placeholder="Логин"><br>
-        <input type="password" id="login-pass" placeholder="Пароль"><br>
+        <input type="text" id="login-user" value="admin" placeholder="Логин"><br>
+        <input type="password" id="login-pass" value="Admin123!" placeholder="Пароль"><br>
         <div id="login-error" class="error"></div>
         <button onclick="tryLogin()">Войти</button>
         <button style="background:#6c757d;" onclick="switchScreen('reg-screen')">Регистрация</button>
-        <p style="font-size:12px; color:#666;">Дефолтный админ: admin / Admin123!</p>
+        <p style="font-size:12px; color:#666;">Дефолтный admin: admin / Admin123!</p>
     </div>
 
     <!-- ЭКРАН РЕГИСТРАЦИИ -->
@@ -52,7 +52,7 @@
     <!-- ГЛАВНЫЙ ЭКРАН ПРИЛОЖЕНИЯ -->
     <div id="main-screen" class="main-screen">
         <div class="header">
-            <h3 id="welcome-msg">Привет, пользователь!</h3>
+            <h3 id="welcome-msg">Привет!</h3>
             <div>
                 <label><input type="checkbox" id="theme-toggle" onclick="toggleTheme()" style="width:auto;"> Тёмная тема</label>
                 <button class="danger" onclick="logout()" style="width:auto; padding: 5px 15px; margin-left:15px;">Выйти</button>
@@ -65,13 +65,11 @@
             <div class="tab" onclick="switchTab(event, 'tab-tx')">Операции</div>
         </div>
 
-        <!-- ВКЛАДКА СВОДКА -->
         <div id="tab-dash" class="tab-content active">
             <h4>Статистика системы личных финансов</h4>
             <p id="stat-text">Загрузка данных...</p>
         </div>
 
-        <!-- ВКЛАДКА СЧЕТА -->
         <div id="tab-acc" class="tab-content">
             <h4>Управление счетами (CRUD)</h4>
             <button onclick="addAccount()" style="width:auto; padding:5px 15px;">+ Добавить счет</button>
@@ -81,7 +79,6 @@
             </table>
         </div>
 
-        <!-- ВКЛАДКА ТРАНЗАКЦИИ -->
         <div id="tab-tx" class="tab-content">
             <h4>История операций (CRUD)</h4>
             <button onclick="addTransaction()" style="width:auto; padding:5px 15px;">+ Добавить операцию</button>
@@ -94,7 +91,6 @@
     </div>
 
     <script>
-        // Имитация базы данных (Базовые данные)
         if(!localStorage.getItem('users')) {
             localStorage.setItem('users', JSON.stringify([
                 {id: 1, username: 'admin', password: 'Admin123!', email: 'admin@finance.com', role: 'admin', currency: 'RUB'}
@@ -111,7 +107,6 @@
         let loginAttempts = 0;
         let lockUntil = 0;
 
-        // Загрузка настроек темы
         if(localStorage.getItem('dark-theme') === 'true') {
             document.body.classList.add('dark');
             document.getElementById('theme-toggle').checked = true;
@@ -137,17 +132,16 @@
             localStorage.setItem('dark-theme', isDark);
         }
 
-        // АВТОРИЗАЦИЯ
         function tryLogin() {
             if(Date.now() < lockUntil) {
                 let rem = Math.ceil((lockUntil - Date.now()) / 1000);
                 document.getElementById('login-error').innerText = `Система заблокирована. Подождите ${rem} сек.`;
                 return;
             }
-            let u = document.getElementById('login-user').value.strip;
+            let u = document.getElementById('login-user').value.trim();
             let p = document.getElementById('login-pass').value;
             let users = JSON.parse(localStorage.getItem('users'));
-            let found = users.find(x => x.username === document.getElementById('login-user').value.trim() && x.password === p);
+            let found = users.find(x => x.username === u && x.password === p);
 
             if(found) {
                 currentUser = found;
@@ -166,7 +160,6 @@
             }
         }
 
-        // РЕГИСТРАЦИЯ
         function tryRegister() {
             let u = document.getElementById('reg-user').value.trim();
             let p = document.getElementById('reg-pass').value;
@@ -184,3 +177,11 @@
 
             users.push({id: users.length+1, username: u, password: p, email: email, role: 'user', currency: curr});
             localStorage.setItem('users', JSON.stringify(users));
+            alert("Регистрация успешна!");
+            switchScreen('auth-screen');
+        }
+
+        function updateData() {
+            let accs = JSON.parse(localStorage.getItem('accounts')) || [];
+            let txs = JSON.parse(localStorage.getItem('transactions')) || [];
+
