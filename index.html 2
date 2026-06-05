@@ -1,0 +1,187 @@
+<!-- Переименуй потом файл в index.html или оставь так, браузер его сожрёт -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Личные финансы v1.0</title>
+    <style>
+        :root { --bg: #f0f2f5; --fg: #000000; --card: #ffffff; --primary: #007bff; --danger: #dc3545; }
+        .dark { --bg: #1c1c1e; --fg: #ffffff; --card: #2c2c2e; --primary: #0a84ff; --danger: #ff453a; }
+        body { font-family: Arial, sans-serif; background: var(--bg); color: var(--fg); margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 90vh; transition: 0.3s; }
+        .card { background: var(--card); padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 400px; text-align: center; }
+        .main-screen { width: 800px; display: none; background: var(--card); padding: 20px; border-radius: 8px; }
+        input, select { width: 90%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; background: var(--card); color: var(--fg); }
+        button { width: 95%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin: 5px 0; }
+        button.danger { background: var(--danger); }
+        .error { color: red; font-size: 14px; margin: 5px 0; font-weight: bold; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ccc; padding-bottom: 10px; }
+        .tabs { display: flex; margin: 15px 0; border-bottom: 1px solid #ccc; }
+        .tab { padding: 10px 20px; cursor: pointer; border: 1px solid transparent; }
+        .tab.active { border: 1px solid #ccc; border-bottom: 1px solid var(--card); font-weight: bold; }
+        .tab-content { display: none; padding: 15px 0; }
+        .tab-content.active { display: block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <!-- ЭКРАН АВТОРИЗАЦИИ -->
+    <div id="auth-screen" class="card">
+        <h2>Вход в систему</h2>
+        <input type="text" id="login-user" placeholder="Логин"><br>
+        <input type="password" id="login-pass" placeholder="Пароль"><br>
+        <div id="login-error" class="error"></div>
+        <button onclick="tryLogin()">Войти</button>
+        <button style="background:#6c757d;" onclick="switchScreen('reg-screen')">Регистрация</button>
+        <p style="font-size:12px; color:#666;">Дефолтный админ: admin / Admin123!</p>
+    </div>
+
+    <!-- ЭКРАН РЕГИСТРАЦИИ -->
+    <div id="reg-screen" class="card" style="display:none;">
+        <h2>Регистрация аккаунта</h2>
+        <input type="text" id="reg-user" placeholder="Придумайте логин"><br>
+        <input type="password" id="reg-pass" placeholder="Придумайте пароль"><br>
+        <input type="password" id="reg-confirm" placeholder="Повторите пароль"><br>
+        <input type="text" id="reg-email" placeholder="Ваш Email"><br>
+        <input type="text" id="reg-curr" placeholder="Учетная валюта (напр. RUB)"><br>
+        <div id="reg-error" class="error"></div>
+        <button onclick="tryRegister()">Зарегистрироваться</button>
+        <button style="background:#6c757d;" onclick="switchScreen('auth-screen')">Назад</button>
+    </div>
+
+    <!-- ГЛАВНЫЙ ЭКРАН ПРИЛОЖЕНИЯ -->
+    <div id="main-screen" class="main-screen">
+        <div class="header">
+            <h3 id="welcome-msg">Привет, пользователь!</h3>
+            <div>
+                <label><input type="checkbox" id="theme-toggle" onclick="toggleTheme()" style="width:auto;"> Тёмная тема</label>
+                <button class="danger" onclick="logout()" style="width:auto; padding: 5px 15px; margin-left:15px;">Выйти</button>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab(event, 'tab-dash')">Сводка</div>
+            <div class="tab" onclick="switchTab(event, 'tab-acc')">Счета</div>
+            <div class="tab" onclick="switchTab(event, 'tab-tx')">Операции</div>
+        </div>
+
+        <!-- ВКЛАДКА СВОДКА -->
+        <div id="tab-dash" class="tab-content active">
+            <h4>Статистика системы личных финансов</h4>
+            <p id="stat-text">Загрузка данных...</p>
+        </div>
+
+        <!-- ВКЛАДКА СЧЕТА -->
+        <div id="tab-acc" class="tab-content">
+            <h4>Управление счетами (CRUD)</h4>
+            <button onclick="addAccount()" style="width:auto; padding:5px 15px;">+ Добавить счет</button>
+            <table>
+                <thead><tr><th>ID</th><th>Название счета</th><th>Баланс</th><th>Действия</th></tr></thead>
+                <tbody id="accounts-table"></tbody>
+            </table>
+        </div>
+
+        <!-- ВКЛАДКА ТРАНЗАКЦИИ -->
+        <div id="tab-tx" class="tab-content">
+            <h4>История операций (CRUD)</h4>
+            <button onclick="addTransaction()" style="width:auto; padding:5px 15px;">+ Добавить операцию</button>
+            <button onclick="exportCSV()" style="width:auto; padding:5px 15px; background:#28a745;">Экспорт в CSV</button>
+            <table>
+                <thead><tr><th>ID</th><th>Счет</th><th>Сумма</th><th>Дата</th><th>Действия</th></tr></thead>
+                <tbody id="transactions-table"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Имитация базы данных (Базовые данные)
+        if(!localStorage.getItem('users')) {
+            localStorage.setItem('users', JSON.stringify([
+                {id: 1, username: 'admin', password: 'Admin123!', email: 'admin@finance.com', role: 'admin', currency: 'RUB'}
+            ]));
+            localStorage.setItem('accounts', JSON.stringify([
+                {id: 1, user_id: 1, name: 'Основной картсчет', balance: 55000}
+            ]));
+            localStorage.setItem('transactions', JSON.stringify([
+                {id: 1, user_id: 1, account: 'Основной картсчет', amount: -1200, date: '2026-06-05'}
+            ]));
+        }
+
+        let currentUser = null;
+        let loginAttempts = 0;
+        let lockUntil = 0;
+
+        // Загрузка настроек темы
+        if(localStorage.getItem('dark-theme') === 'true') {
+            document.body.classList.add('dark');
+            document.getElementById('theme-toggle').checked = true;
+        }
+
+        function switchScreen(screenId) {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('reg-screen').style.display = 'none';
+            document.getElementById('main-screen').style.display = 'none';
+            document.getElementById(screenId).style.display = 'block';
+        }
+
+        function switchTab(evt, tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            evt.currentTarget.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+            updateData();
+        }
+
+        function toggleTheme() {
+            let isDark = document.body.classList.toggle('dark');
+            localStorage.setItem('dark-theme', isDark);
+        }
+
+        // АВТОРИЗАЦИЯ
+        function tryLogin() {
+            if(Date.now() < lockUntil) {
+                let rem = Math.ceil((lockUntil - Date.now()) / 1000);
+                document.getElementById('login-error').innerText = `Система заблокирована. Подождите ${rem} сек.`;
+                return;
+            }
+            let u = document.getElementById('login-user').value.strip;
+            let p = document.getElementById('login-pass').value;
+            let users = JSON.parse(localStorage.getItem('users'));
+            let found = users.find(x => x.username === document.getElementById('login-user').value.trim() && x.password === p);
+
+            if(found) {
+                currentUser = found;
+                loginAttempts = 0;
+                document.getElementById('welcome-msg').innerText = `Привет, ${currentUser.username} [${currentUser.role}]`;
+                switchScreen('main-screen');
+                updateData();
+            } else {
+                loginAttempts++;
+                if(loginAttempts >= 3) {
+                    lockUntil = Date.now() + 30000;
+                    document.getElementById('login-error').innerText = "Превышено 3 попытки! Блокировка на 30 сек.";
+                } else {
+                    document.getElementById('login-error').innerText = `Неверный логин или пароль. Попыток: ${loginAttempts}/3`;
+                }
+            }
+        }
+
+        // РЕГИСТРАЦИЯ
+        function tryRegister() {
+            let u = document.getElementById('reg-user').value.trim();
+            let p = document.getElementById('reg-pass').value;
+            let conf = document.getElementById('reg-confirm').value;
+            let email = document.getElementById('reg-email').value.trim();
+            let curr = document.getElementById('reg-curr').value.trim();
+
+            if(!u || !p || !email || !curr) { document.getElementById('reg-error').innerText = "Заполните все поля!"; return; }
+            if(p !== conf) { document.getElementById('reg-error').innerText = "Пароли не совпадают!"; return; }
+            if(p.length < 8 || !/[A-Z]/.test(p) || !/[0-9]/.test(p)) { document.getElementById('reg-error').innerText = "Пароль слишком простой!"; return; }
+            if(!/@/.test(email)) { document.getElementById('reg-error').innerText = "Неверный формат Email!"; return; }
+
+            let users = JSON.parse(localStorage.getItem('users'));
+            if(users.find(x => x.username === u)) { document.getElementById('reg-error').innerText = "Логин уже занят!"; return; }
+
+            users.push({id: users.length+1, username: u, password: p, email: email, role: 'user', currency: curr});
+            localStorage.setItem('users', JSON.stringify(users));
